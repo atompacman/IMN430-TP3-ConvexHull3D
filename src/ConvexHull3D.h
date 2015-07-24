@@ -60,14 +60,6 @@ void selectInitialTetrahedronVertices(const std::vector<Point>& i_Pts,
     } while (areCoplanar(i_Pts[o_P1], i_Pts[o_P2], i_Pts[o_P3], i_Pts[o_P4]));
 }
 
-DCEL3D buildTetrahedron(uint i_P1,
-                        uint i_P2,
-                        uint i_P3,
-                        uint i_P4)
-{
-    return DCEL3D(i_P1, i_P2, i_P3, i_P4);
-}
-
 int* createRandomPermutationOfIndices(uint i_N,
                                       uint i_P1,
                                       uint i_P2,
@@ -90,20 +82,19 @@ int* createRandomPermutationOfIndices(uint i_N,
     return index;
 }
 
-std::list<Point> compute3DConvexHull(const std::vector<Point>& i_Pts)
+sptr<DCEL3D> compute3DConvexHull(const std::vector<Point>& i_Pts)
 {
     // Select points that forms the initial tetrahedron
     uint p1, p2, p3, p4;
     selectInitialTetrahedronVertices(i_Pts, p1, p2, p3, p4);
 
     // Build initial tetrahedric convex hull
-    buildTetrahedron(p1, p2, p3, p4);
+    sptr<DCEL3D> convexHull(new DCEL3D(i_Pts[p1], i_Pts[p2], i_Pts[p3], i_Pts[p4]));
 
     // Create random permutation of indices
     int* index(createRandomPermutationOfIndices(i_Pts.size(), p1, p2, p3, p4));
 
-
-    return std::list<Point>();
+    return convexHull;
 }
 
 #endif

@@ -31,6 +31,8 @@ int g_CamZoom = 450;
 std::vector<Point> g_Pnts;
 Point              g_Centroid(0,0,0);
 
+// DCEL 3D (for debugging only)
+sptr<DCEL3D> g_DCEL;
 
 void mouseButton(int i_Button, int i_State, int i_X, int i_Y)
 {
@@ -167,7 +169,7 @@ int main(int argc, char** argv)
     readVertexFile(argv[1]);
 
     // Compute convex hull
-    //compute3DConvexHull(pts);
+    g_DCEL = compute3DConvexHull(g_Pnts);
 
     // Start main rendering loop
     glutMainLoop();
