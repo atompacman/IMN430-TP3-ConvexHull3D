@@ -4,6 +4,7 @@
 
 #include "ConvexHull3D.h"
 #include "Point.h"
+#include "Vector.h"
 
 #include "GL/gl.h"
 #include "GL/glu.h"
@@ -71,6 +72,35 @@ void mouseMove(int i_X, int i_Y)
     glutPostRedisplay();
 }
 
+inline void addCenteredVertex(const Point& i_Pt)
+{
+    glVertex3d(i_Pt.m_x - g_Centroid.m_x, 
+               i_Pt.m_y - g_Centroid.m_y, 
+               i_Pt.m_z - g_Centroid.m_z);
+}
+
+void drawConvexHull()
+{
+    // For each facet
+    for (sptr<Facet>& facet : g_DCEL->m_Facets) {
+
+        // Draw each vertex
+        glBegin(GL_POLYGON);
+
+        // Get normal
+        Vector& normal(facet->m_Normal);
+
+        sptr<HalfEdge> edge(facet->m_AnEdge);
+        do {
+            addCenteredVertex(*edge->m_Origin);
+            glNormal3d(normal.m_x, normal.m_y, normal.m_z);
+            edge = edge->m_Next;
+        } while (edge != facet->m_AnEdge);
+
+        glEnd();
+    }
+}
+
 void draw()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -90,9 +120,12 @@ void draw()
     // Draw points
     glBegin(GL_POINTS);
     for (Point pnt : g_Pnts) {
-        glVertex3d(pnt.m_x - g_Centroid.m_x, pnt.m_y - g_Centroid.m_y, pnt.m_z - g_Centroid.m_z);
+        addCenteredVertex(pnt);
     }
     glEnd();
+
+    // Draw convex hull
+    drawConvexHull();
 
     glutSwapBuffers();
 }
@@ -126,6 +159,8 @@ void initOpenGL(int argc, char** argv)
     glFrontFace(GL_CCW);
     glEnable(GL_NORMALIZE);
     glEnable(GL_LIGHT0);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
 }
 
 void readVertexFile(const char* i_Filepath)

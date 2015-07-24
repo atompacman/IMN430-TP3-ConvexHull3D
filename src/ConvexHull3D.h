@@ -94,6 +94,9 @@ sptr<DCEL3D> compute3DConvexHull(const std::vector<Point>& i_Pts)
     // Create random permutation of indices
     int* index(createRandomPermutationOfIndices(i_Pts.size(), p1, p2, p3, p4));
 
+    // Get rid of those monstrous integers !
+    delete[] index;
+
     return convexHull;
 }
 

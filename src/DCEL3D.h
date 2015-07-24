@@ -76,9 +76,6 @@ struct Facet
         findHalfEdge(i_PtA, i_PtB)->twinTo(i_Facet->findHalfEdge(i_PtA, i_PtB));
     }
 
-    /************************************************************************/
-    /* Find the edge that as two specific extremities                       */
-    /************************************************************************/
     sptr<HalfEdge> findHalfEdge(sptr<const Point> i_PtA, sptr<const Point> i_PtB)
     {
         sptr<HalfEdge> currEdge(m_AnEdge->m_Next);
@@ -121,7 +118,7 @@ struct DCEL3D
         sptr<Facet> abd(addFacet(a, b, d));
 
         // connect them via twins
-        // TOdO: make this part suck less
+        // TODO: make this part suck less
         abc->connectTo(bcd, b, c);
         abc->connectTo(acd, a, c);
         abc->connectTo(abd, a, b);
