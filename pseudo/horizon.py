@@ -5,7 +5,6 @@ def getOrderedHorizonHalfEdges(point_node, D):
 	horizon = []
 
 	# Trouver un premier half-edge faisant partie de l'horizon
-	trouve = False
 	for face in point_node.conflits:
 		horizon_half_edge = getHalfEdgeTouchingHorizon(face)
 		if horizon_half_edge is not None:
@@ -25,15 +24,14 @@ def getOrderedHorizonHalfEdges(point_node, D):
 		trouve = False
 		while continuer:
 			adjac_face = half_edge.twin.face
-			if adjac_face in faces_visitees:
-				continue
-			# Verifier si la face adjacente contient un half-edge bordant l'horizon
-			horizon_half_edge = getHalfEdgeTouchingHorizon(adjac_face)
-			if horizon_half_edge is not None:
-				trouve = True
-				horizon.append(horizon_half_edge)
-				face = adjac_face
-				break
+			if adjac_face not in faces_visitees:
+				# Verifier si la face adjacente contient un half-edge bordant l'horizon
+				horizon_half_edge = getHalfEdgeTouchingHorizon(adjac_face)
+				if horizon_half_edge is not None:
+					trouve = True
+					horizon.append(horizon_half_edge)
+					face = adjac_face
+					break
 			# Suite de la boucle
 			half_edge = half_edge.next
 			continuer = half_edge != premier_half_edge
