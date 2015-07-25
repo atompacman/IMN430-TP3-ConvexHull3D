@@ -29,11 +29,11 @@ int g_CamPhi = 90;
 int g_CamZoom = 450;
 
 // Points
-std::vector<Point> g_Pnts;
-Point              g_Centroid(0,0,0);
+std::vector<sptr<const Point>> g_Pnts;
+Point g_Centroid(0,0,0);
 
-// DCEL 3D (for debugging only)
-sptr<DCEL3D> g_DCEL;
+// Convex hull
+sptr<DCEL3D> g_ConvexHull;
 
 void mouseButton(int i_Button, int i_State, int i_X, int i_Y)
 {
@@ -72,17 +72,20 @@ void mouseMove(int i_X, int i_Y)
     glutPostRedisplay();
 }
 
-inline void addCenteredVertex(const Point& i_Pt)
+inline void addCenteredVertex(sptr<const Point> i_Pt)
 {
-    glVertex3d(i_Pt.m_x - g_Centroid.m_x, 
-               i_Pt.m_y - g_Centroid.m_y, 
-               i_Pt.m_z - g_Centroid.m_z);
+    glVertex3d(i_Pt->m_x - g_Centroid.m_x, 
+               i_Pt->m_y - g_Centroid.m_y,
+               i_Pt->m_z - g_Centroid.m_z);
 }
 
 void drawConvexHull()
 {
     // For each facet
-    for (sptr<Facet>& facet : g_DCEL->m_Facets) {
+    for (sptr<Facet>& facet : g_ConvexHull->m_Facets) {
+        if (!facet) {
+            continue;
+        }
 
         // Draw each vertex
         glBegin(GL_POLYGON);
@@ -92,7 +95,7 @@ void drawConvexHull()
 
         sptr<HalfEdge> edge(facet->m_AnEdge);
         do {
-            addCenteredVertex(*edge->m_Origin);
+            addCenteredVertex(edge->m_Origin);
             glNormal3d(normal.m_x, normal.m_y, normal.m_z);
             edge = edge->m_Next;
         } while (edge != facet->m_AnEdge);
@@ -119,7 +122,7 @@ void draw()
 
     // Draw points
     glBegin(GL_POINTS);
-    for (Point pnt : g_Pnts) {
+    for (sptr<const Point> pnt : g_Pnts) {
         addCenteredVertex(pnt);
     }
     glEnd();
@@ -180,7 +183,7 @@ void readVertexFile(const char* i_Filepath)
         file >> y;
         file >> z;
 
-        g_Pnts.emplace_back(x, y, z);
+        g_Pnts.emplace_back(new Point(x, y, z));
 
         g_Centroid.m_x += x;
         g_Centroid.m_y += y;
@@ -204,7 +207,7 @@ int main(int argc, char** argv)
     readVertexFile(argv[1]);
 
     // Compute convex hull
-    g_DCEL = compute3DConvexHull(g_Pnts);
+    g_ConvexHull = compute3DConvexHull(g_Pnts);
 
     // Start main rendering loop
     glutMainLoop();

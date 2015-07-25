@@ -2,9 +2,11 @@
 #define __ConvexHull3D__
 
 #include <algorithm>
+#include <assert>
 #include <ctime>
 #include <list>
 #include <random>
+#include <set>
 #include <vector>
 
 #include "ConflictGraph.h"
@@ -13,28 +15,28 @@
 
 #define EPSILON 1e-6
 
-inline bool areCollinear(const Point& i_A,
-                         const Point& i_B,
-                         const Point& i_C)
+inline bool areCollinear(sptr<const Point> i_A,
+                         sptr<const Point> i_B,
+                         sptr<const Point> i_C)
 {
-    return fabs(i_A.m_x * (i_B.m_y - i_C.m_y) +
-                i_B.m_x * (i_C.m_y - i_A.m_y) +
-                i_C.m_x * (i_A.m_y - i_B.m_y)) < EPSILON;
+    return fabs(i_A->m_x * (i_B->m_y - i_C->m_y) +
+                i_B->m_x * (i_C->m_y - i_A->m_y) +
+                i_C->m_x * (i_A->m_y - i_B->m_y)) < EPSILON;
 }
 
-inline bool areCoplanar(const Point& i_A,
-                        const Point& i_B,
-                        const Point& i_C,
-                        const Point& i_D)
+inline bool areCoplanar(sptr<const Point> i_A,
+                        sptr<const Point> i_B,
+                        sptr<const Point> i_C,
+                        sptr<const Point> i_D)
 {
-    return fabs(dot(i_C - i_A, cross(i_B - i_A, i_D - i_C))) < EPSILON;
+    return fabs(dot(*i_C - *i_A, cross(*i_B - *i_A, *i_D - *i_C))) < EPSILON;
 }
 
-void selectInitialTetrahedronVertices(const std::vector<Point>& i_Pts,
-                                      uint&                     o_P1,
-                                      uint&                     o_P2,
-                                      uint&                     o_P3,
-                                      uint&                     o_P4)
+void selectInitialTetrahedronVertices(const std::vector<sptr<const Point>>& i_Pts,
+                                      uint& o_P1,
+                                      uint& o_P2,
+                                      uint& o_P3,
+                                      uint& o_P4)
 {
     // Random integer distribution
     std::random_device rd;
@@ -82,7 +84,52 @@ int* createRandomPermutationOfIndices(uint i_N,
     return index;
 }
 
-sptr<DCEL3D> compute3DConvexHull(const std::vector<Point>& i_Pts)
+void insertPointInConvexHull(uint              i_PtIndex,
+                             sptr<const Point> i_Pts,
+                             ConflictGraph&    io_graph,
+                             sptr<DCEL3D>      io_DCEL)
+{
+    // Remove visible facets of DCEL and record their ids
+    std::set<uint> visibleFacets;
+
+    for (sptr<FacetNode>& toDelete : io_graph.m_Conflicts[i_PtIndex]) {
+        io_DCEL->m_Facets[toDelete->m_Facet->m_ID] = NULL;
+        visibleFacets.emplace(toDelete->m_Facet->m_ID);
+    }
+
+    // v Find an edge that is on the horizon
+    sptr<HalfEdge> startEdge;
+
+    // For each visible facet "F"
+    for (sptr<FacetNode>& facet : io_graph.m_Conflicts[i_PtIndex]) {
+        // For each adjacent facet "A"
+        for (sptr<Facet>& adjFacet : facet->m_Facet->m_AdjFacets) {
+            // If "F" has an adjacent facet "A" that is not visible from the
+            // point, "F" is at the 
+            if (visibleFacets.find(adjFacet->m_ID) == visibleFacets.end()) {
+                // Find the half-edge that is on the horizon
+                startEdge = facet->m_Facet->m_AnEdge;
+                while (startEdge->m_Twin->m_Facet->m_ID != adjFacet->m_ID) {
+                    startEdge = startEdge->m_Next;
+                }
+                break;
+            }
+        }
+        if (!startEdge) {
+            break;
+        }
+    }
+    assert(startEdge);
+
+    // Walk along the horizon
+    sptr<HalfEdge> edge;
+    do {
+
+        edge = edge->m_Next->m_Twin->m_Next;
+    } while (edge != startEdge);
+}
+
+sptr<DCEL3D> compute3DConvexHull(const std::vector<sptr<const Point>>& i_Pts)
 {
     // Select points that forms the initial tetrahedron
     uint p1, p2, p3, p4;
@@ -93,6 +140,17 @@ sptr<DCEL3D> compute3DConvexHull(const std::vector<Point>& i_Pts)
 
     // Create random permutation of indices
     int* index(createRandomPermutationOfIndices(i_Pts.size(), p1, p2, p3, p4));
+
+    // Initialize conflict graph
+    ConflictGraph graph(i_Pts, index, convexHull);
+
+    // Add each remaining point to the convex hull
+    for (uint i = 0; i < i_Pts.size() - 4; ++i) {
+        sptr<const Point> pt(i_Pts[index[i]]);
+        if (!graph.m_Conflicts[index[i]].empty()) {
+            insertPointInConvexHull(index[i], i_Pts[index[i]], graph, convexHull);
+        }
+    }
 
     // Get rid of those monstrous integers !
     delete[] index;
