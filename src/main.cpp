@@ -35,6 +35,10 @@ Point g_Centroid(0,0,0);
 // Convex hull
 sptr<DCEL3D> g_ConvexHull;
 
+////////////////////////////////
+sptr<ConflictGraph> conflictGraph;
+////////////////////////////////
+
 void mouseButton(int i_Button, int i_State, int i_X, int i_Y)
 {
     g_MouseButton = i_Button;
@@ -121,11 +125,19 @@ void draw()
         0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
     // Draw points
+    // ______________________________________________________________________________
+    sptr<FacetNode> facetNode(conflictGraph->m_Conflicts[6].back());
     glBegin(GL_POINTS);
-    for (sptr<const Point> pnt : g_Pnts) {
-        addCenteredVertex(pnt);
+    for (uint index : facetNode->m_Conflicts) {
+        addCenteredVertex(g_Pnts[index]);
     }
     glEnd();
+    // ______________________________________________________________________________
+    //glBegin(GL_POINTS);
+    //for (sptr<const Point> pnt : g_Pnts) {
+    //    addCenteredVertex(pnt);
+    //}
+    //glEnd();
 
     // Draw convex hull
     drawConvexHull();
@@ -207,7 +219,7 @@ int main(int argc, char** argv)
     readVertexFile(argv[1]);
 
     // Compute convex hull
-    g_ConvexHull = compute3DConvexHull(g_Pnts);
+    g_ConvexHull = compute3DConvexHull(g_Pnts, conflictGraph);
 
     // Start main rendering loop
     glutMainLoop();

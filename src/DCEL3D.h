@@ -11,6 +11,8 @@ typedef unsigned int uint;
 
 #define sptr std::shared_ptr
 
+struct Facet;
+
 struct HalfEdge : std::enable_shared_from_this<HalfEdge>
 {
     sptr<const Point> m_Origin;
@@ -29,14 +31,14 @@ struct HalfEdge : std::enable_shared_from_this<HalfEdge>
     bool hasExtremities(sptr<const Point> i_PtA, sptr<const Point> i_PtB);
 };
 
-struct Facet : std::enable_shared_from_this<HalfEdge>
+struct Facet : std::enable_shared_from_this<Facet>
 {
     sptr<HalfEdge>         m_AnEdge;
     Vector                 m_Normal;
     uint                   m_ID;
     std::list<sptr<Facet>> m_AdjFacets;
 
-    static uint    s_LastID;
+    static uint            s_LastID;
 
     Facet(sptr<const Point> i_PtA,
           sptr<const Point> i_PtB,

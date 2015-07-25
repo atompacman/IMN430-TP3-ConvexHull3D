@@ -63,11 +63,6 @@ Facet::Facet(sptr<const Point> i_PtA,
     else {
         m_AnEdge->connectTo(i_PtB)->connectTo(i_PtC)->connectTo(m_AnEdge);
     }
-
-    // Link edges to facet
-    m_AnEdge->m_Facet = shared_from_this();
-    m_AnEdge->m_Next->m_Facet = shared_from_this();
-    m_AnEdge->m_Next->m_Next->m_Facet = shared_from_this();
 }
 
 void Facet::connectTo(sptr<Facet> i_Facet, sptr<const Point> i_Pti_PtA, sptr<const Point> i_PtB)
@@ -131,6 +126,16 @@ sptr<Facet> DCEL3D::addFacet(sptr<const Point> i_P1,
                              sptr<const Point> i_P2,
                              sptr<const Point> i_P3)
 {
-    m_Facets.emplace_back(new Facet(i_P1, i_P2, i_P3, m_PtInside));
-    return m_Facets.back();
+    // Create facet
+    sptr<Facet> facet(new Facet(i_P1, i_P2, i_P3, m_PtInside));
+
+    // Add it to the list
+    m_Facets.push_back(facet);
+
+    // Link edges to facet
+    facet->m_AnEdge->m_Facet = facet;
+    facet->m_AnEdge->m_Next->m_Facet = facet;
+    facet->m_AnEdge->m_Next->m_Next->m_Facet = facet;
+
+    return facet;
 }

@@ -2,7 +2,6 @@
 #define __ConvexHull3D__
 
 #include <algorithm>
-#include <assert>
 #include <ctime>
 #include <list>
 #include <random>
@@ -105,7 +104,7 @@ void insertPointInConvexHull(uint              i_PtIndex,
         // For each adjacent facet "A"
         for (sptr<Facet>& adjFacet : facet->m_Facet->m_AdjFacets) {
             // If "F" has an adjacent facet "A" that is not visible from the
-            // point, "F" is at the 
+            // point, "F" has an edge that is on the horizon
             if (visibleFacets.find(adjFacet->m_ID) == visibleFacets.end()) {
                 // Find the half-edge that is on the horizon
                 startEdge = facet->m_Facet->m_AnEdge;
@@ -129,7 +128,7 @@ void insertPointInConvexHull(uint              i_PtIndex,
     } while (edge != startEdge);
 }
 
-sptr<DCEL3D> compute3DConvexHull(const std::vector<sptr<const Point>>& i_Pts)
+sptr<DCEL3D> compute3DConvexHull(const std::vector<sptr<const Point>>& i_Pts, sptr<ConflictGraph>& YOLOOOOOO)
 {
     // Select points that forms the initial tetrahedron
     uint p1, p2, p3, p4;
@@ -142,15 +141,14 @@ sptr<DCEL3D> compute3DConvexHull(const std::vector<sptr<const Point>>& i_Pts)
     int* index(createRandomPermutationOfIndices(i_Pts.size(), p1, p2, p3, p4));
 
     // Initialize conflict graph
-    ConflictGraph graph(i_Pts, index, convexHull);
-
-    // Add each remaining point to the convex hull
-    for (uint i = 0; i < i_Pts.size() - 4; ++i) {
-        sptr<const Point> pt(i_Pts[index[i]]);
-        if (!graph.m_Conflicts[index[i]].empty()) {
-            insertPointInConvexHull(index[i], i_Pts[index[i]], graph, convexHull);
-        }
-    }
+    YOLOOOOOO = sptr<ConflictGraph>(new ConflictGraph(i_Pts, index, convexHull));
+    //// Add each remaining point to the convex hull
+    //for (uint i = 0; i < i_Pts.size() - 4; ++i) {
+    //    sptr<const Point> pt(i_Pts[index[i]]);
+    //    if (!graph.m_Conflicts[index[i]].empty()) {
+    //        insertPointInConvexHull(index[i], i_Pts[index[i]], graph, convexHull);
+    //    }
+    //}
 
     // Get rid of those monstrous integers !
     delete[] index;

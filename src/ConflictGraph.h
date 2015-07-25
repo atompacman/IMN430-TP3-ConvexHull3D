@@ -7,8 +7,8 @@
 #include "DCEL3D.h"
 #include "Point.h"
 
-struct FacetNode {
-
+struct FacetNode 
+{
     sptr<Facet>     m_Facet;
     std::list<uint> m_Conflicts;
 
@@ -21,23 +21,25 @@ struct ConflictGraph
 {
     std::list<sptr<FacetNode>>* m_Conflicts;
 
-    ConflictGraph(const std::vector<sptr<const Point>>& i_Pts, 
-                  const int*                            i_Index, 
+    ConflictGraph(const std::vector<sptr<const Point>>& i_Pts,
+                  const int*                            i_Index,
                   sptr<DCEL3D>                          i_DCEL) :
 
         m_Conflicts(new std::list<sptr<FacetNode>>[i_Pts.size()])
     {
-    // For each facet
-    for (const sptr<Facet>& facet : i_DCEL->m_Facets) {
-        // Create a node in the conflict graph
-        sptr<FacetNode> facetNode(new FacetNode(facet));
+        // For each facet
+        for (const sptr<Facet>& facet : i_DCEL->m_Facets) {
+            // Create a node in the conflict graph
+            sptr<FacetNode> facetNode(new FacetNode(facet));
 
-        // For each point
-        for (uint i = 0; i < i_Pts.size() - 4; ++i) {
-            // If facet is visible from the point
-            if (facet->isVisibleFor(i_Pts[i])) {
-                facetNode->m_Conflicts.push_back(i);
-                m_Conflicts[i].push_back(facetNode);
+            // For each point
+            for (uint i = 0; i < i_Pts.size() - 4; ++i) {
+                // If facet is visible from the point
+                uint index(i_Index[i]);
+                if (facet->isVisibleFor(i_Pts[index])) {
+                    facetNode->m_Conflicts.push_back(index);
+                    m_Conflicts[index].push_back(facetNode);
+                }
             }
         }
     }
