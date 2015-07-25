@@ -57,29 +57,3 @@ def getOrderedHorizonEdges(point_node, D):
 			break
 
 	return horizon
-
-def getOrderedHorizonEdgesV0(point_node, D):
-	# D est la DCEL
-
-	# Trouver les edges autour du groupe de faces en conflit avec point_node
-	# Critere: Inclure un half-edge si son twin est sur une face non en conflit (invisible)
-
-	# Optimisation: trouver un premier half-edge, et continuer le long de l'horizon
-
-	horizon = []
-
-	for face in point_node.conflits:
-		# Boucler sur les half-edges de la face
-		premier_half_edge = face.an_edge
-		half_edge = premier_half_edge
-		continuer = True 
-		while continuer:
-			# Ajouter a la liste si twin fait partie d'une face invisible
-			adjac_face = half_edge.twin.face
-			if adjac_face not in point_node.conflits:
-				horizon.append(half_edge)
-			# Suite de la boucle
-			half_edge = half_edge.next
-			continuer = half_edge != premier_half_edge
-
-	return horizon # TODO: N'est pas trie!!
