@@ -29,15 +29,7 @@ int g_CamPhi = 90;
 int g_CamZoom = 450;
 
 // Points
-std::vector<sptr<const Point>> g_Pnts;
 Point g_Centroid(0,0,0);
-
-// Convex hull
-sptr<DCEL3D> g_ConvexHull;
-
-////////////////////////////////
-sptr<ConflictGraph> conflictGraph;
-////////////////////////////////
 
 void mouseButton(int i_Button, int i_State, int i_X, int i_Y)
 {
@@ -76,7 +68,7 @@ void mouseMove(int i_X, int i_Y)
     glutPostRedisplay();
 }
 
-inline void addCenteredVertex(sptr<const Point> i_Pt)
+inline void addCenteredVertex(sPoint i_Pt)
 {
     glVertex3d(i_Pt->m_x - g_Centroid.m_x, 
                i_Pt->m_y - g_Centroid.m_y,
@@ -125,19 +117,11 @@ void draw()
         0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
     // Draw points
-    // ______________________________________________________________________________
-    sptr<FacetNode> facetNode(conflictGraph->m_Conflicts[6].back());
     glBegin(GL_POINTS);
-    for (uint index : facetNode->m_Conflicts) {
-        addCenteredVertex(g_Pnts[index]);
+    for (sPoint pnt : g_Pts) {
+        addCenteredVertex(pnt);
     }
     glEnd();
-    // ______________________________________________________________________________
-    //glBegin(GL_POINTS);
-    //for (sptr<const Point> pnt : g_Pnts) {
-    //    addCenteredVertex(pnt);
-    //}
-    //glEnd();
 
     // Draw convex hull
     drawConvexHull();
@@ -195,14 +179,14 @@ void readVertexFile(const char* i_Filepath)
         file >> y;
         file >> z;
 
-        g_Pnts.emplace_back(new Point(x, y, z));
+        g_Pts.emplace_back(new Point(x, y, z));
 
         g_Centroid.m_x += x;
         g_Centroid.m_y += y;
         g_Centroid.m_z += z;
     }
 
-    g_Centroid /= g_Pnts.size();
+    g_Centroid /= g_Pts.size();
 }
 
 int main(int argc, char** argv)
@@ -219,7 +203,7 @@ int main(int argc, char** argv)
     readVertexFile(argv[1]);
 
     // Compute convex hull
-    g_ConvexHull = compute3DConvexHull(g_Pnts, conflictGraph);
+    compute3DConvexHull();
 
     // Start main rendering loop
     glutMainLoop();
