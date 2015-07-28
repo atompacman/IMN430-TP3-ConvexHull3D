@@ -43,10 +43,7 @@ struct Facet : std::enable_shared_from_this<Facet>
 
     static uint    s_LastID;
 
-    Facet(sPoint i_PtA,
-          sPoint i_PtB,
-          sPoint i_PtC,
-          sPoint i_InsideDCEL3D);
+    Facet(sPoint i_PtA, sPoint i_PtB, sPoint i_PtC, sPoint i_InsideDCEL3D);
 
     void connectTo(sptr<Facet> i_Facet, sPoint i_PtA, sPoint i_PtB);
 

@@ -84,7 +84,7 @@ void drawConvexHull()
         }
 
         // Draw each vertex
-        glBegin(GL_POLYGON);
+        glBegin(GL_LINES);
 
         // Get normal
         Vector& normal(facet->m_Normal);
@@ -141,8 +141,6 @@ void initOpenGL(int argc, char** argv)
         exit(0);
     }
 
-    glClearColor(0.8, 0.8, 0.8, 0.0);
-
     // Activate z-buffer
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
@@ -153,7 +151,7 @@ void initOpenGL(int argc, char** argv)
     glutMotionFunc(mouseMove);
 
     // Lightning
-    glEnable(GL_LIGHTING);
+    //glEnable(GL_LIGHTING);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     glFrontFace(GL_CCW);
     glEnable(GL_NORMALIZE);

@@ -13,14 +13,10 @@
 #include "DCEL3D.h"
 #include "Point.h"
 
-/************************************************************************/
-/*                          Temporary variables                         */
-/************************************************************************/
 std::vector<sPoint> g_Pts;
 int*                g_Index;
 sptr<DCEL3D>        g_ConvexHull;
-std::set<uint>*     g_ConflictGraph;
-/************************************************************************/
+std::set<uint>*     g_FacetsVisibleByPt;
 
 bool areCollinear(sPoint i_A, sPoint i_B, sPoint i_C)
 {
@@ -80,7 +76,7 @@ void createRandomPermutationOfIndices(uint i_P1, uint i_P2, uint i_P3, uint i_P4
 void createConflictGraph()
 {
     // For each point to insert, there is a list of facets with which they are in conflict
-    g_ConflictGraph = new std::set<uint>[g_Pts.size()];
+    g_FacetsVisibleByPt = new std::set<uint>[g_Pts.size()];
 
     // For each facet
     for (const sptr<Facet>& facet : g_ConvexHull->m_Facets) {
@@ -90,7 +86,7 @@ void createConflictGraph()
             uint index(g_Index[i]);
             if (facet->isVisibleBy(g_Pts[index])) {
                 facet->m_Conflicts.emplace(index);
-                g_ConflictGraph[index].emplace(facet->m_ID);
+                g_FacetsVisibleByPt[index].emplace(facet->m_ID);
             }
         }
     }
@@ -100,7 +96,7 @@ sptr<HalfEdge> findAnHalfEdgeOfFacetOnHorizon(uint i_FacetID, uint i_PtIdx)
 {
     sptr<HalfEdge> halfEdge(g_ConvexHull->m_Facets[i_FacetID]->m_AnEdge);
     sptr<HalfEdge> firstEdge(halfEdge);
-    std::set<uint>& visibleFacetIDs(g_ConflictGraph[i_PtIdx]);
+    std::set<uint>& visibleFacetIDs(g_FacetsVisibleByPt[i_PtIdx]);
 
     // For every half-edge forming the facet
     do {
@@ -118,7 +114,7 @@ sptr<HalfEdge> findAnHalfEdgeOfFacetOnHorizon(uint i_FacetID, uint i_PtIdx)
 sptr<HalfEdge> findNextHalfEdgeOnHorizon(sptr<HalfEdge> i_HalfEdge, uint i_PtIdx)
 {
     sptr<HalfEdge> nextHalfEdge = i_HalfEdge->m_Next;
-    std::set<uint>& visibleFacetIDs(g_ConflictGraph[i_PtIdx]);
+    std::set<uint>& visibleFacetIDs(g_FacetsVisibleByPt[i_PtIdx]);
 
     // For every half-edge sharing the same origin
     do {
@@ -132,6 +128,23 @@ sptr<HalfEdge> findNextHalfEdgeOnHorizon(sptr<HalfEdge> i_HalfEdge, uint i_PtIdx
     // We're dead, Jim
     assert(false);
     return NULL;
+}
+
+void addNewConflicts(sptr<Facet> m_FromFacet, sptr<Facet> m_ToFacet, uint i_ProcessedPt)
+{
+    // For each point in conflict with the "From" facet
+    for (uint index : m_FromFacet->m_Conflicts) {
+        // Do not add new faces to visible faces of processed point, because
+        // when need to keep clean the list of old faces in order to delete them
+        if (index == i_ProcessedPt) {
+            continue;
+        }
+        // If "To" facet is visible from the point
+        if (m_ToFacet->isVisibleBy(g_Pts[index])) {
+            m_ToFacet->m_Conflicts.emplace(index);
+            g_FacetsVisibleByPt[index].emplace(m_ToFacet->m_ID);
+        }
+    }
 }
 
 sptr<HalfEdge> addNewFace(uint i_PtIdx, sptr<HalfEdge> i_HalfEdge)
@@ -157,31 +170,10 @@ sptr<HalfEdge> addNewFace(uint i_PtIdx, sptr<HalfEdge> i_HalfEdge)
         twin->twinTo(newFacet->m_AnEdge);
 
         // For each point in conflict with the first facet
-        for (uint index : i_HalfEdge->m_Facet->m_Conflicts) {
-            // If facet is visible from the point
-            if (newFacet->isVisibleBy(g_Pts[index])) {
-                newFacet->m_Conflicts.emplace(index);
-                g_ConflictGraph[index].emplace(newFacet->m_ID);
-            }
-        }
+        addNewConflicts(i_HalfEdge->m_Facet, newFacet, i_PtIdx);
 
         // For each point in conflict with the second facet
-        for (uint index : twin->m_Facet->m_Conflicts) {
-            // If facet is visible from the point
-            if (newFacet->isVisibleBy(g_Pts[index])) {
-                newFacet->m_Conflicts.emplace(index);
-                g_ConflictGraph[index].emplace(newFacet->m_ID);
-            }
-        }
-
-        // Delete arcs incident to deleted facets
-        for (uint facetID : g_ConflictGraph[i_PtIdx]) {
-            for (uint index : g_ConvexHull->m_Facets[facetID]->m_Conflicts) {
-                if (i_PtIdx != index) {
-                    g_ConflictGraph[index].erase(facetID);
-                }
-            }
-        }
+        addNewConflicts(twin->m_Facet, newFacet, i_PtIdx);
 
         return newFacet->m_AnEdge->m_Next;
     }
@@ -193,7 +185,7 @@ void insertPointInConvexHull(uint i_PtIdx)
     sptr<HalfEdge> startEdge;
 
     // For each visible facet
-    for (uint facetID : g_ConflictGraph[i_PtIdx]) {
+    for (uint facetID : g_FacetsVisibleByPt[i_PtIdx]) {
         // Find an half-edge that is on the horizon
         startEdge = findAnHalfEdgeOfFacetOnHorizon(facetID, i_PtIdx);
         // If we found one
@@ -228,8 +220,13 @@ void insertPointInConvexHull(uint i_PtIdx)
     // Connect last facet with first one
     lastToTwin->m_Next->twinTo(waiting4ATwin);
 
-    // Remove visible facets of DCEL
-    for (uint facetID : g_ConflictGraph[i_PtIdx]) {
+    // Delete arcs incident to deleted facets
+    for (uint facetID : g_FacetsVisibleByPt[i_PtIdx]) {
+        for (uint ptIndex : g_ConvexHull->m_Facets[facetID]->m_Conflicts) {
+            if (i_PtIdx != ptIndex) {
+                g_FacetsVisibleByPt[ptIndex].erase(facetID);
+            }
+        }
         // Remove the facet from the DCEL (it is still referenced by twins)
         g_ConvexHull->m_Facets[facetID] = NULL;
     }
@@ -254,9 +251,9 @@ sptr<DCEL3D> compute3DConvexHull()
     createConflictGraph();
 
     // Add each remaining point to the convex hull
-    for (uint i = 0; i < 1/*g_Pts.size() - 4*/; ++i) {
+    for (uint i = 0; i < g_Pts.size() - 4; ++i) {
         std::cout << "\rAdding point " << i << "/" << g_Pts.size() - 4;
-        if (!g_ConflictGraph[g_Index[i]].empty()) {
+        if (!g_FacetsVisibleByPt[g_Index[i]].empty()) {
             insertPointInConvexHull(g_Index[i]);
         }
     }
