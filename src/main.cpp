@@ -1,9 +1,14 @@
+/************************************************************************/
+/* PRESS 'm' TO TOGGLE BETWEEN VISUALIZATION MODES                      */
+/************************************************************************/
+
 #include <fstream>
 #include <vector>
 #include <windows.h>
 
 #include "ConvexHull3D.h"
 #include "Point.h"
+#include "Vector.h"
 
 #include "GL/gl.h"
 #include "GL/glu.h"
@@ -27,10 +32,12 @@ int g_CamTheta = 45;
 int g_CamPhi = 90;
 int g_CamZoom = 450;
 
-// Points
-std::vector<Point> g_Pnts;
-Point              g_Centroid(0,0,0);
+// Visualisation mode (press 'm')
+enum Mode { WIREFRAME, FACETS, POINTS_ONLY };
+Mode g_Mode = FACETS;
 
+// Points
+Point g_Centroid(0,0,0);
 
 void mouseButton(int i_Button, int i_State, int i_X, int i_Y)
 {
@@ -69,6 +76,48 @@ void mouseMove(int i_X, int i_Y)
     glutPostRedisplay();
 }
 
+void handleKeyboard(unsigned char key, int, int)
+{
+    switch (key) {
+    case 'm':
+        g_Mode = Mode((g_Mode + 1) % 3);
+        break;
+    }
+    glutPostRedisplay();
+}
+
+inline void addCenteredVertex(sPoint i_Pt)
+{
+    glVertex3d(i_Pt->m_x - g_Centroid.m_x, 
+               i_Pt->m_y - g_Centroid.m_y,
+               i_Pt->m_z - g_Centroid.m_z);
+}
+
+void drawConvexHull()
+{
+    // For each facet
+    for (sptr<Facet>& facet : g_ConvexHull->m_Facets) {
+        if (!facet) {
+            continue;
+        }
+
+        // Draw each vertex
+        glBegin(g_Mode == FACETS ? GL_POLYGON : GL_LINES);
+
+        // Get normal
+        Vector& normal(facet->m_Normal);
+
+        sptr<HalfEdge> edge(facet->m_AnEdge);
+        do {
+            addCenteredVertex(edge->m_Origin);
+            glNormal3d(normal.m_x, normal.m_y, normal.m_z);
+            edge = edge->m_Next;
+        } while (edge != facet->m_AnEdge);
+
+        glEnd();
+    }
+}
+
 void draw()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -87,10 +136,22 @@ void draw()
 
     // Draw points
     glBegin(GL_POINTS);
-    for (Point pnt : g_Pnts) {
-        glVertex3d(pnt.m_x - g_Centroid.m_x, pnt.m_y - g_Centroid.m_y, pnt.m_z - g_Centroid.m_z);
+    for (sPoint pnt : g_Pts) {
+        addCenteredVertex(pnt);
     }
     glEnd();
+
+    // Toggle lightning
+    if (g_Mode == FACETS) {
+        glEnable(GL_LIGHTING);
+    } else {
+        glDisable(GL_LIGHTING);
+    }
+
+    // Draw convex hull
+    if (g_Mode != POINTS_ONLY) {
+        drawConvexHull();
+    }
 
     glutSwapBuffers();
 }
@@ -107,23 +168,23 @@ void initOpenGL(int argc, char** argv)
         exit(0);
     }
 
-    glClearColor(0.8, 0.8, 0.8, 0.0);
-
     // Activate z-buffer
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
 
     // Callbacks
     glutDisplayFunc(draw);
+    glutKeyboardFunc(handleKeyboard);
     glutMouseFunc(mouseButton);
     glutMotionFunc(mouseMove);
 
     // Lightning
-    glEnable(GL_LIGHTING);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     glFrontFace(GL_CCW);
     glEnable(GL_NORMALIZE);
     glEnable(GL_LIGHT0);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
 }
 
 void readVertexFile(const char* i_Filepath)
@@ -143,14 +204,14 @@ void readVertexFile(const char* i_Filepath)
         file >> y;
         file >> z;
 
-        g_Pnts.emplace_back(x, y, z);
+        g_Pts.emplace_back(new Point(x, y, z));
 
         g_Centroid.m_x += x;
         g_Centroid.m_y += y;
         g_Centroid.m_z += z;
     }
 
-    g_Centroid /= g_Pnts.size();
+    g_Centroid /= g_Pts.size();
 }
 
 int main(int argc, char** argv)
@@ -167,7 +228,7 @@ int main(int argc, char** argv)
     readVertexFile(argv[1]);
 
     // Compute convex hull
-    //compute3DConvexHull(pts);
+    compute3DConvexHull();
 
     // Start main rendering loop
     glutMainLoop();
