@@ -155,7 +155,8 @@ sptr<HalfEdge> addNewFace(uint i_PtIdx, sptr<HalfEdge> i_HalfEdge)
     if (twin->m_Facet->isCoplanarWith(g_Pts[i_PtIdx])) {
         // Twin is now connected to the new point, which is connected to the 
         // end of the half-edge on horizon
-        twin->connectTo(g_Pts[i_PtIdx])->connectTo(twin->m_Next);
+		sptr<HalfEdge> temp(twin->m_Next);
+		twin->connectTo(g_Pts[i_PtIdx])->connectTo(temp);
         // Twin's twin is now unkown
         twin->m_Twin = NULL;
 
