@@ -95,21 +95,32 @@ inline void addCenteredVertex(sPoint i_Pt)
 
 void drawConvexHull()
 {
-    // For each facet
+	std::cout << "Drawing" << std::endl;
+	
+	// For each facet
     for (sptr<Facet>& facet : g_ConvexHull->m_Facets) {
         if (!facet) {
             continue;
         }
 
         // Draw each vertex
-        glBegin(g_Mode == FACETS ? GL_POLYGON : GL_LINES);
+        glBegin(g_Mode == FACETS ? GL_POLYGON : GL_LINE_LOOP);
 
         // Get normal
         Vector& normal(facet->m_Normal);
 
         sptr<HalfEdge> edge(facet->m_AnEdge);
         do {
-            addCenteredVertex(edge->m_Origin);
+			if (edge->m_Twin == edge->m_Next || edge->m_Twin == edge->m_Prev)
+			{
+				glColor3f(1, 0, 0);
+			}
+			else
+			{
+				glColor3f(1, 1, 1);
+			}
+			
+			addCenteredVertex(edge->m_Origin);
             glNormal3d(normal.m_x, normal.m_y, normal.m_z);
             edge = edge->m_Next;
         } while (edge != facet->m_AnEdge);
