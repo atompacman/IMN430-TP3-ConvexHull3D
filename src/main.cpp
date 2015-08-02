@@ -1,3 +1,7 @@
+/************************************************************************/
+/* PRESS 'm' TO TOGGLE BETWEEN VISUALIZATION MODES                      */
+/************************************************************************/
+
 #include <fstream>
 #include <vector>
 #include <windows.h>
@@ -27,6 +31,10 @@ int g_MouseY      = 0;
 int g_CamTheta = 45;
 int g_CamPhi = 90;
 int g_CamZoom = 450;
+
+// Visualisation mode (press 'm')
+enum Mode { WIREFRAME, FACETS, POINTS_ONLY };
+Mode g_Mode = FACETS;
 
 // Points
 Point g_Centroid(0,0,0);
@@ -68,6 +76,16 @@ void mouseMove(int i_X, int i_Y)
     glutPostRedisplay();
 }
 
+void handleKeyboard(unsigned char key, int, int)
+{
+    switch (key) {
+    case 'm':
+        g_Mode = Mode((g_Mode + 1) % 3);
+        break;
+    }
+    glutPostRedisplay();
+}
+
 inline void addCenteredVertex(sPoint i_Pt)
 {
     glVertex3d(i_Pt->m_x - g_Centroid.m_x, 
@@ -84,7 +102,7 @@ void drawConvexHull()
         }
 
         // Draw each vertex
-        glBegin(GL_LINES);
+        glBegin(g_Mode == FACETS ? GL_POLYGON : GL_LINES);
 
         // Get normal
         Vector& normal(facet->m_Normal);
@@ -123,8 +141,17 @@ void draw()
     }
     glEnd();
 
+    // Toggle lightning
+    if (g_Mode == FACETS) {
+        glEnable(GL_LIGHTING);
+    } else {
+        glDisable(GL_LIGHTING);
+    }
+
     // Draw convex hull
-    drawConvexHull();
+    if (g_Mode != POINTS_ONLY) {
+        drawConvexHull();
+    }
 
     glutSwapBuffers();
 }
@@ -147,11 +174,11 @@ void initOpenGL(int argc, char** argv)
 
     // Callbacks
     glutDisplayFunc(draw);
+    glutKeyboardFunc(handleKeyboard);
     glutMouseFunc(mouseButton);
     glutMotionFunc(mouseMove);
 
     // Lightning
-    //glEnable(GL_LIGHTING);
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
     glFrontFace(GL_CCW);
     glEnable(GL_NORMALIZE);

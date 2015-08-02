@@ -252,7 +252,7 @@ sptr<DCEL3D> compute3DConvexHull()
 
     // Add each remaining point to the convex hull
     for (uint i = 0; i < g_Pts.size() - 4; ++i) {
-        std::cout << "\rAdding point " << i << "/" << g_Pts.size() - 4;
+        printf("\rAdding point %d/%d", i, g_Pts.size() - 4);
         if (!g_FacetsVisibleByPt[g_Index[i]].empty()) {
             insertPointInConvexHull(g_Index[i]);
         }
